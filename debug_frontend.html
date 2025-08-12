@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deepfake Detection - Debug Version</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .upload-area {
+            border: 2px dashed #007bff;
+            padding: 40px;
+            text-align: center;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .upload-area:hover {
+            background: #f8f9fa;
+            border-color: #0056b3;
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+            font-size: 16px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .preview-section {
+            display: none;
+        }
+        .preview-image {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .results {
+            background: #e8f5e8;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .error {
+            background: #ffe6e6;
+            color: #d63384;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .debug {
+            background: #fff3cd;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Deepfake Detection - Debug Version</h1>
+    
+    <div class="section">
+        <h2>Upload Image</h2>
+        <div class="upload-area" id="uploadArea">
+            <p>📁 Drag & drop an image here or click to browse</p>
+            <input type="file" id="fileInput" accept="image/*" style="display: none;">
+            <button class="btn" onclick="document.getElementById('fileInput').click()">Choose File</button>
+        </div>
+        <div class="debug" id="debugLog">Debug: Page loaded</div>
+    </div>
+
+    <div class="section preview-section" id="previewSection">
+        <h2>Image Preview</h2>
+        <img id="previewImage" class="preview-image" alt="Preview">
+        <div id="imageInfo"></div>
+        <div style="text-align: center; margin: 20px 0;">
+            <button class="btn" id="analyzeBtn" style="background: #28a745; font-size: 18px; padding: 15px 30px;">
+                🧠 ANALYZE IMAGE
+            </button>
+            <button class="btn" id="clearBtn" style="background: #6c757d;">
+                🗑️ Clear
+            </button>
+        </div>
+    </div>
+
+    <div class="section" id="resultsSection" style="display: none;">
+        <h2>Analysis Results</h2>
+        <div id="results"></div>
+    </div>
+
+    <div class="section error" id="errorSection" style="display: none;">
+        <h2>Error</h2>
+        <div id="errorMessage"></div>
+    </div>
+
+    <script>
+        let currentFile = null;
+        
+        // Debug function
+        function log(message) {
+            const debugLog = document.getElementById('debugLog');
+            debugLog.innerHTML += '<br>' + new Date().toLocaleTimeString() + ': ' + message;
+            console.log(message);
+        }
+        
+        // DOM elements
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const previewSection = document.getElementById('previewSection');
+        const previewImage = document.getElementById('previewImage');
+        const imageInfo = document.getElementById('imageInfo');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const resultsSection = document.getElementById('resultsSection');
+        const errorSection = document.getElementById('errorSection');
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            log('DOM Content Loaded');
+            setupEventListeners();
+        });
+        
+        function setupEventListeners() {
+            log('Setting up event listeners');
+            
+            // File input
+            fileInput.addEventListener('change', function(e) {
+                log('File input change event');
+                handleFileSelect(e.target.files[0]);
+            });
+            
+            // Upload area click
+            uploadArea.addEventListener('click', function() {
+                log('Upload area clicked');
+                fileInput.click();
+            });
+            
+            // Drag and drop
+            uploadArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                uploadArea.style.background = '#f8f9fa';
+            });
+            
+            uploadArea.addEventListener('dragleave', function(e) {
+                uploadArea.style.background = '';
+            });
+            
+            uploadArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                uploadArea.style.background = '';
+                log('File dropped');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleFileSelect(files[0]);
+                }
+            });
+            
+            // Buttons
+            analyzeBtn.addEventListener('click', function() {
+                log('Analyze button clicked!');
+                analyzeImage();
+            });
+            
+            clearBtn.addEventListener('click', function() {
+                log('Clear button clicked');
+                clearAll();
+            });
+            
+            log('Event listeners set up complete');
+        }
+        
+        function handleFileSelect(file) {
+            if (!file) {
+                log('No file selected');
+                return;
+            }
+            
+            log('File selected: ' + file.name + ' (' + file.type + ')');
+            
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                showError('Please select an image file');
+                return;
+            }
+            
+            currentFile = file;
+            showImagePreview(file);
+        }
+        
+        function showImagePreview(file) {
+            log('Showing image preview');
+            
+            // Hide other sections
+            resultsSection.style.display = 'none';
+            errorSection.style.display = 'none';
+            
+            // Create file reader
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                log('Image loaded into preview');
+                previewImage.src = e.target.result;
+                
+                // Show preview section
+                previewSection.style.display = 'block';
+                
+                // Update image info
+                const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
+                imageInfo.innerHTML = `<strong>File:</strong> ${file.name}<br><strong>Size:</strong> ${sizeInMB} MB<br><strong>Type:</strong> ${file.type}`;
+                
+                log('Preview section should now be visible with ANALYZE button');
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        async function analyzeImage() {
+            if (!currentFile) {
+                log('ERROR: No file to analyze');
+                showError('No file selected');
+                return;
+            }
+            
+            log('Starting analysis...');
+            
+            try {
+                const formData = new FormData();
+                formData.append('image', currentFile);
+                
+                log('Sending request to API...');
+                const response = await fetch('http://localhost:8000/predict', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                log('Response received: ' + response.status);
+                
+                if (!response.ok) {
+                    throw new Error('API request failed: ' + response.status);
+                }
+                
+                const result = await response.json();
+                log('Analysis result: ' + JSON.stringify(result));
+                
+                showResults(result);
+                
+            } catch (error) {
+                log('ERROR: ' + error.message);
+                showError('Analysis failed: ' + error.message);
+            }
+        }
+        
+        function showResults(result) {
+            log('Displaying results');
+            
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `
+                <h3>🎯 Analysis Complete</h3>
+                <p><strong>Prediction:</strong> ${result.prediction}</p>
+                <p><strong>Confidence:</strong> ${(result.confidence * 100).toFixed(1)}%</p>
+                <p><strong>Processing Time:</strong> ${result.processing_time}s</p>
+                <p><strong>Face Detected:</strong> ${result.face_detected ? 'Yes' : 'No'}</p>
+                <p><strong>Model Type:</strong> ${result.model_type}</p>
+            `;
+            
+            resultsSection.style.display = 'block';
+        }
+        
+        function showError(message) {
+            log('Showing error: ' + message);
+            document.getElementById('errorMessage').textContent = message;
+            errorSection.style.display = 'block';
+        }
+        
+        function clearAll() {
+            log('Clearing all');
+            currentFile = null;
+            previewSection.style.display = 'none';
+            resultsSection.style.display = 'none';
+            errorSection.style.display = 'none';
+            previewImage.src = '';
+            imageInfo.innerHTML = '';
+        }
+    </script>
+</body>
+</html>

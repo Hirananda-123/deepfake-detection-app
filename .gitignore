@@ -1,0 +1,29 @@
+# Ignore development files
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.env
+.vscode/
+.idea/
+
+# Ignore large files that shouldn't be in git
+*.pkl
+temp_uploads/
+sample_data/
+*.zip
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
+
+# Ignore logs
+*.log
+logs/
+
+# Ignore deployment artifacts
+.dockerignore
